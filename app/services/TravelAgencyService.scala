@@ -7,9 +7,7 @@ import org.jsoup.Jsoup
 
 import scala.collection.JavaConverters._
 
-//Todo: get offers
-//Todo: get countries
-//Todo: get all data for filters
+
 class TravelAgencyService @Inject() (offers: List[Offer]){
   def getRainbowOffers(dateFrom: DateTime, dateTo: DateTime, countries: List[String], numberOfPersons: Int): List[Offer] = {
     List()
