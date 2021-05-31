@@ -1,0 +1,41 @@
+@import scala.collection.mutable.ListBuffer
+
+@(searchedOffers: ListBuffer[models.Offer])
+
+@main("Offers"){
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="font-bold">Offers</h1>
+            <hr>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+        @if(offers != null){
+            <table class="table table-hover table-condensed" id="mytable">
+                <thead>
+                    <tr>
+                        <th class="font-text">No.</th>
+                        <th class="font-text">Name</th>
+                        <th class="font-text">Price</th>
+                        <th class="font-text">Link</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @for(offer <- searchedOffers){
+                    <tr>
+                        <td class="font-text">@offer.no</td>
+                        <td class="font-text">@offer.name</td>
+                        <td class="font-text">@offer.price</td>
+                        <td class="font-text">@offer.link</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }else{
+            <h3>No data for this params.</h3>
+        }
+        </div>
+    </div>
+}

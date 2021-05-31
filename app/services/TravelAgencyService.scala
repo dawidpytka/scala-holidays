@@ -11,7 +11,7 @@ import scala.collection.mutable.ListBuffer
 
 class TravelAgencyService @Inject() (){
 
-  def getBestOffers(dateFrom: DateTime, dateTo: DateTime, countries: List[String], numberOfPersons: Int = 1): Unit ={
+  def getBestOffers(dateFrom: DateTime, dateTo: DateTime, countries: List[String], numberOfPersons: Int = 1): ListBuffer[Offer] ={
     var bestOffers = new ListBuffer[Offer]()
 
     bestOffers = ListBuffer.concat(
