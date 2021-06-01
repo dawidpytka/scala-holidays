@@ -4,6 +4,9 @@ import javax.inject.Inject
 import models.Offer
 import org.joda.time.DateTime
 import org.jsoup.Jsoup
+import play.api.libs.functional.syntax.toFunctionalBuilderOps
+import play.api.libs.json.{JsValue, Json, Reads, __}
+import scalaj.http.{Http, HttpOptions}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -24,8 +27,36 @@ class TravelAgencyService @Inject() (){
   }
 
   def getRainbowOffers(dateFrom: DateTime, dateTo: DateTime, countries: List[String], numberOfPersons: Int): List[Offer] = {
+    var body = """{"Konfiguracja":{"LiczbaPokoi":"1","Wiek":["1990-07-14","1990-07-14"]},"Sortowanie":{"CzyPoDacie":false,"CzyPoCenie":true,"CzyPoOcenach":false,"CzyPoPolecanych":false,"CzyDesc":false},"CzyCenaZaWszystkich":false,"CzyGrupowac":true,"MiastaWyjazdu":[], "Panstwa":["""
+    if (countries != null && countries.nonEmpty) {
+      for(country <- countries) yield body = body + """""""  + changePolishSigns(country.toLowerCase) + """","""
+    }
+    body = body.dropRight(1)
+    body = body + """],"TerminWyjazduMin":""""
+    if (dateFrom!=null) body = body + dateFrom.toString("yyyy-MM-dd")
+    body = body + """","TerminWyjazduMax":""""
+    if (dateTo!=null) body = body + dateTo.toString("yyyy-MM-dd")
+    body = body + """","CzyPotwierdzoneTerminy":false,"PokazywaneLotniska":"SAME","Paginacja":{"Przeczytane":"0","IloscDoPobrania":"18"},"CzyImprezaWeekendowa":false}"""
 
-    List()
+    val result = Http("https://rpl-api.r.pl/v3/wyszukiwarka/api/wyszukaj")
+      .postData(body)
+      .header("Content-Type", "application/json")
+      .header("Charset", "UTF-8")
+      .option(HttpOptions.readTimeout(1000000)).asString
+
+    val json: JsValue = Json.parse(result.body)
+    val trips = json \"Bloczki"
+
+    implicit val offerRead: Reads[Offer] = (
+      (__  \ "BazoweInformacje" \ "HotelID" ).read[Int] ~
+        (__  \ "BazoweInformacje" \ "OfertaNazwa").read[String] ~
+        ((__ \ "Ceny")(0) \ "CenaZaOsobeAktualna").read[Double] ~
+        (__  \ "BazoweInformacje" \ "OfertaURL").read[String]
+      )(Offer)
+
+    implicit val offersRead: Reads[List[Offer]] = Reads.list(offerRead)
+    val offers = trips.get.validate[List[Offer]](offersRead)
+    offers.get.take(5)
   }
 
   private def getItakaOffers(dateFrom: DateTime, dateTo: DateTime, countries: List[String], numberOfPersons: Int = 1): List[Offer] = {
