@@ -1,10 +1,26 @@
 @import scala.collection.mutable.ListBuffer
 
-@(searchedOffers: ListBuffer[models.Offer])
+@import forms.SearchForm
+
+@(searchedOffers: ListBuffer[models.Offer], searchForm: Form[SearchForm],action_form: play.api.mvc.Call)(implicit messages: play.api.i18n.Messages)
 
 @main("Offers"){
     <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("lib/bootstrap/css/bootstrap.min.css")">
     <script src="@routes.Assets.versioned("lib/bootstrap/js/bootstrap.min.js")" crossorigin="anonymous"></script>
+
+    @helper.form(action = action_form) {
+
+        @helper.inputText(searchForm("dateFrom"), 'type -> "date")
+        @helper.inputText(searchForm("dateTo"), 'type -> "date")
+        @helper.inputText(searchForm("minDateAmount"))
+        @helper.inputText(searchForm("starsAmount"))
+        @helper.inputText(searchForm("personsAmount"))
+        @if(action_form == routes.TravelAgencyController.searchTrips) {
+            <div class="form-group">
+                <button type="submit" class="btn btn-success col-md-2 pull-right">Search</button>
+            </div>
+        }
+    }
     <div class="row">
         <div class="col-md-12">
             <h1 class="font-bold">Offers</h1>
