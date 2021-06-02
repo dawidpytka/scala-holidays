@@ -38,7 +38,7 @@ class TravelAgencyService @Inject() (){
     body = body + """" ,"KategoriaHoteluMin":""""+ minHotelRate
     body = body + """","MiastaWyjazdu":[], "Panstwa":["""
     if (countries != null && countries.nonEmpty) {
-      for(country <- countries) yield body = body + """""""  + changePolishSigns(country.toLowerCase) + """","""
+      countries.foreach(c => body = body + """""""  + changePolishSigns(c.toLowerCase) + """",""")
     }
     body = body.dropRight(1)
     body = body + """],"TerminWyjazduMin":""""
@@ -68,7 +68,16 @@ class TravelAgencyService @Inject() (){
 
     implicit val offersRead: Reads[List[Offer]] = Reads.list(offerRead)
     val offers = trips.get.validate[List[Offer]](offersRead)
-    offers.get.take(5)
+
+    val finalOffers = for (offer <- offers.get) yield Offer (
+      no = offer.no,
+      name = offer.name,
+      price = offer.price,
+      link = "https://r.pl" + offer.link,
+      duration = offer.duration,
+      hotelRate = offer.hotelRate
+    )
+    finalOffers.take(5)
   }
 
   private def getItakaOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int): List[Offer] = {
@@ -78,7 +87,7 @@ class TravelAgencyService @Inject() (){
 
     if (countries != null && countries.nonEmpty) {
       sourceUrl = sourceUrl + "&dest-region="
-      for(country <- countries) yield sourceUrl = sourceUrl + changePolishSigns(country.toLowerCase) + "%2C"
+      countries.foreach(c => sourceUrl = sourceUrl + changePolishSigns(c.toLowerCase) + "%2C")
       sourceUrl = sourceUrl.dropRight(3)
     }
     sourceUrl = sourceUrl + "&hotel-rate=" + minHotelRate + "0"
@@ -112,7 +121,7 @@ class TravelAgencyService @Inject() (){
     var sourceUrl: String = "https://www.traveliada.pl/wczasy/"
     if (countries != null && countries.nonEmpty) {
       sourceUrl = sourceUrl + "do"
-      for(country <- countries) yield sourceUrl = sourceUrl + "," + changePolishSigns(country.toLowerCase)
+      countries.foreach(c => sourceUrl = sourceUrl + "," + changePolishSigns(c.toLowerCase))
     }
 
     if (dateFrom!=null) sourceUrl = sourceUrl + "/t1," + format2.format(dateFrom)
