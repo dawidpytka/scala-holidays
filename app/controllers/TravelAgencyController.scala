@@ -34,9 +34,9 @@ class TravelAgencyController @Inject()(val controllerComponents: ControllerCompo
     mapping(
       "dateFrom" -> Forms.of(dateTimeLocal),
       "dateTo" -> Forms.of(dateTimeLocal),
-          "minDaysAmount" -> number,
-          "starsAmount" -> number,
-              "personsAmount" -> number
+          "minDaysAmount" -> number(min = 1, max = 30),
+          "starsAmount" -> number(min = 1, max = 5),
+              "personsAmount" -> number(min = 1, max = 12)
     )
     (SearchForm.apply)(SearchForm.unapply))
 
@@ -56,7 +56,7 @@ class TravelAgencyController @Inject()(val controllerComponents: ControllerCompo
           println("BUU")
           println(formWithErrors.errors.toString)
           //offers = service.getBestOffers(new DateTime().plusDays(60), new DateTime().plusDays(70), List("Czarnogóra", "Grecja"), 2)
-          Ok( views.html.offers(offers,searchForm, routes.TravelAgencyController.searchTrips))
+          Ok( views.html.offers(offers,formWithErrors, routes.TravelAgencyController.searchTrips))
         },
         formCorrect => {
           println("yupi")
