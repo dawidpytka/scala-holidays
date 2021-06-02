@@ -60,11 +60,12 @@ class TravelAgencyService @Inject() (){
     implicit val offerRead: Reads[Offer] = (
       (__  \ "BazoweInformacje" \ "HotelID" ).read[Int] ~
         (__  \ "BazoweInformacje" \ "OfertaNazwa").read[String] ~
-        (__ \ "BazoweInformacje" \ "KodProduktu").read[String] ~
+        (__ \ "").readWithDefault("") ~
         ((__ \ "Ceny")(0) \ "CenaZaOsobeAktualna").read[Double] ~
         (__  \ "BazoweInformacje" \ "OfertaURL").read[String] ~
         ((__ \ "Ceny")(0) \ "LiczbaDni").read[Int] ~
-        (__ \ "BazoweInformacje" \ "GwiazdkiHotelu").read[Double]
+        (__ \ "BazoweInformacje" \ "GwiazdkiHotelu").read[Double] ~
+        (__ \ "Ocena" \ "Ocena").readWithDefault(0.0)
       )(Offer)
 
     implicit val offersRead: Reads[List[Offer]] = Reads.list(offerRead)
@@ -77,7 +78,8 @@ class TravelAgencyService @Inject() (){
       price = offer.price,
       link = "https://r.pl" + offer.link,
       duration = offer.duration,
-      hotelRate = offer.hotelRate
+      hotelRate = offer.hotelRate,
+      reviewRate = offer.reviewRate
     )
     finalOffers.take(10)
   }
@@ -114,7 +116,8 @@ class TravelAgencyService @Inject() (){
         price = offerElement.select(".current-price_value").html().substring(0,offerElement.select(".current-price_value").html().indexOf("&nbsp")).replaceAll("\\s", "").toDouble,
         link = "https://www.itaka.pl"+offerElement.select(".offer_link").attr("href"),
         duration = offerElement.select(".offer_date span").not(".offer_date_icon-container").text().substring(16, 17).toInt,
-        hotelRate = offerElement.select(".star").toArray().length - offerElement.select(".star_half").toArray().length * 0.5
+        hotelRate = offerElement.select(".star").toArray().length - offerElement.select(".star_half").toArray().length * 0.5,
+        reviewRate = offerElement.select(".hotel-rank").text().toDouble
       )
 
     offersData.toList.filter(offer => offer.duration >= minDays).take(10)
@@ -144,9 +147,14 @@ class TravelAgencyService @Inject() (){
       price = offerElement.select(".s2o_mob1 .s2o_cena span").text().toDouble,
       link = offerElement.select(".s2o_hot a").attr("href"),
       duration = offerElement.select(".s2o_mob1 .s2o_dni").textNodes().get(0).text().substring(0,1).toInt,
-      hotelRate = offerElement.select(""".s2o_star img[src="/themes/images/star_1.png"]""").size()
+      hotelRate = offerElement.select(""".s2o_star img[src="/themes/images/star_1.png"]""").size(),
+      reviewRate = replaceNullStringToZeroString(offerElement.select(".s2o_ocena").text()).substring(0,3).toDouble*6/10
     )
     offersData.toList.filter(offer => offer.duration >= minDays).take(10)
+  }
+
+  private def replaceNullStringToZeroString(string: String): String = {
+    if (string == null || string.isEmpty) "0000" else string
   }
 
   def getAllCounties: List[String] = {
