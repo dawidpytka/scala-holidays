@@ -2,19 +2,22 @@ package services
 
 import javax.inject.Inject
 import models.Offer
-import org.joda.time.DateTime
 import org.jsoup.Jsoup
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
 import play.api.libs.json.{JsValue, Json, Reads, __}
 import scalaj.http.{Http, HttpOptions}
 
+import java.util.Date
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
 
 class TravelAgencyService @Inject() (){
+  val format1 = new java.text.SimpleDateFormat("yyyy-MM-dd")
+  val format2 = new java.text.SimpleDateFormat("dd-MM-yyyy")
 
-  def getBestOffers(dateFrom: DateTime, dateTo: DateTime, countries: List[String], numberOfPersons: Int = 1, minDays: Int = 1, minHotelRate: Int = 3): ListBuffer[Offer] ={
+
+  def getBestOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int = 1, minDays: Int = 1, minHotelRate: Int = 3): ListBuffer[Offer] ={
     var bestOffers = new ListBuffer[Offer]()
 
     bestOffers = ListBuffer.concat(
@@ -26,7 +29,7 @@ class TravelAgencyService @Inject() (){
     bestOffers.take(5)
   }
 
-  def getRainbowOffers(dateFrom: DateTime, dateTo: DateTime, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int): List[Offer] = {
+  def getRainbowOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int): List[Offer] = {
     var body = """{"Konfiguracja":{"LiczbaPokoi":"1","Wiek":["""
     for (_ <- 1 to numberOfPersons) body = body + """"1990-07-14","""
     body = body.dropRight(1)
@@ -39,9 +42,9 @@ class TravelAgencyService @Inject() (){
     }
     body = body.dropRight(1)
     body = body + """],"TerminWyjazduMin":""""
-    if (dateFrom!=null) body = body + dateFrom.toString("yyyy-MM-dd")
+    if (dateFrom!=null) body = body + format1.format(dateFrom)
     body = body + """","TerminWyjazduMax":""""
-    if (dateTo!=null) body = body + dateTo.toString("yyyy-MM-dd")
+    if (dateTo!=null) body = body + format1.format(dateTo)
 
     body = body + """","TypyTransportu":["air"],"CzyPotwierdzoneTerminy":false,"PokazywaneLotniska":"SAME","Paginacja":{"Przeczytane":"0","IloscDoPobrania":"18"},"CzyImprezaWeekendowa":false}"""
 
@@ -68,10 +71,10 @@ class TravelAgencyService @Inject() (){
     offers.get.take(5)
   }
 
-  private def getItakaOffers(dateFrom: DateTime, dateTo: DateTime, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int): List[Offer] = {
+  private def getItakaOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int): List[Offer] = {
     var sourceUrl: String = "https://www.itaka.pl/wyniki-wyszukiwania/wakacje/?view=offerList"+"&adults="+numberOfPersons
-    if (dateFrom!=null) sourceUrl = sourceUrl + "&date-from=" + dateFrom.toString("yyyy-MM-dd")
-    if (dateTo!=null) sourceUrl = sourceUrl + "&date-to=" + dateTo.toString("yyyy-MM-dd")
+    if (dateFrom!=null) sourceUrl = sourceUrl + "&date-from=" + format1.format(dateFrom)
+    if (dateTo!=null) sourceUrl = sourceUrl + "&date-to=" + format1.format(dateTo)
 
     if (countries != null && countries.nonEmpty) {
       sourceUrl = sourceUrl + "&dest-region="
@@ -105,15 +108,15 @@ class TravelAgencyService @Inject() (){
     offersData.toList.filter(offer => offer.duration >= minDays).take(5)
   }
 
-  private def getTraveliadaOffers(dateFrom: DateTime, dateTo: DateTime, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int): List[Offer] = {
+  private def getTraveliadaOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int): List[Offer] = {
     var sourceUrl: String = "https://www.traveliada.pl/wczasy/"
     if (countries != null && countries.nonEmpty) {
       sourceUrl = sourceUrl + "do"
       for(country <- countries) yield sourceUrl = sourceUrl + "," + changePolishSigns(country.toLowerCase)
     }
 
-    if (dateFrom!=null) sourceUrl = sourceUrl + "/t1," + dateFrom.toString("dd-MM-yyyy")
-    if (dateTo!=null) sourceUrl = sourceUrl + "/t2," + dateTo.toString("dd-MM-yyyy")
+    if (dateFrom!=null) sourceUrl = sourceUrl + "/t1," + format2.format(dateFrom)
+    if (dateTo!=null) sourceUrl = sourceUrl + "/t2," + format2.format(dateTo)
     sourceUrl = sourceUrl + "/adt," + numberOfPersons
     sourceUrl = sourceUrl + "/samolotem"
     sourceUrl = sourceUrl + "/s," + minHotelRate + "-5"

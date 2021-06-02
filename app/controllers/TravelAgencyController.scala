@@ -49,7 +49,7 @@ class TravelAgencyController @Inject()(val controllerComponents: ControllerCompo
 
   }
 
-  def searchTrips = Action {
+  def searchTrips: Action[AnyContent] = Action {
     implicit request =>
       searchForm.bindFromRequest.fold(
         formWithErrors => {
@@ -60,8 +60,8 @@ class TravelAgencyController @Inject()(val controllerComponents: ControllerCompo
         },
         formCorrect => {
           println("yupi")
-          offers = service.getBestOffers(new DateTime().plusDays(60), new DateTime().plusDays(70), List("Czarnogóra", "Grecja"), 2)
-          Ok( views.html.offers(offers,searchForm, routes.TravelAgencyController.searchTrips))
+          offers = service.getBestOffers(formCorrect.dateFrom, formCorrect.dateTo, List("Czarnogóra", "Grecja"), 2)
+          Ok( views.html.offers(offers, searchForm, routes.TravelAgencyController.searchTrips))
         }
 
       )
