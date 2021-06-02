@@ -36,7 +36,8 @@ class TravelAgencyController @Inject()(val controllerComponents: ControllerCompo
       "dateTo" -> Forms.of(dateTimeLocal),
           "minDaysAmount" -> number(min = 1, max = 30),
           "starsAmount" -> number(min = 1, max = 5),
-              "personsAmount" -> number(min = 1, max = 12)
+              "personsAmount" -> number(min = 1, max = 12),
+      "country" -> text
     )
     (SearchForm.apply)(SearchForm.unapply))
 
@@ -45,7 +46,7 @@ class TravelAgencyController @Inject()(val controllerComponents: ControllerCompo
     offers = ListBuffer[Offer]()
     //offers = service.getBestOffers(new DateTime().plusDays(60), new DateTime().plusDays(70), List("Czarnogóra", "Grecja"), 2)
 //    val bestOffers: Unit = service.getBestOffers(new DateTime().plusDays(60), new DateTime().plusDays(70), List("Czarnogóra", "Grecja"), 2)
-    Ok( views.html.offers(offers,searchForm, routes.TravelAgencyController.searchTrips))
+    Ok( views.html.offers(offers,searchForm, routes.TravelAgencyController.searchTrips,service.getAllCounties))
 
   }
 
@@ -56,12 +57,12 @@ class TravelAgencyController @Inject()(val controllerComponents: ControllerCompo
           println("BUU")
           println(formWithErrors.errors.toString)
           //offers = service.getBestOffers(new DateTime().plusDays(60), new DateTime().plusDays(70), List("Czarnogóra", "Grecja"), 2)
-          Ok( views.html.offers(offers,formWithErrors, routes.TravelAgencyController.searchTrips))
+          Ok( views.html.offers(offers,formWithErrors, routes.TravelAgencyController.searchTrips,service.getAllCounties ))
         },
         formCorrect => {
           println("yupi")
-          offers = service.getBestOffers(formCorrect.dateFrom, formCorrect.dateTo, List("Czarnogóra", "Grecja"), formCorrect.personsAmount, formCorrect.minDaysAmount, formCorrect.starsAmount )
-          Ok( views.html.offers(offers, searchForm, routes.TravelAgencyController.searchTrips))
+          offers = service.getBestOffers(formCorrect.dateFrom, formCorrect.dateTo, List(formCorrect.Country), formCorrect.personsAmount, formCorrect.minDaysAmount, formCorrect.starsAmount )
+          Ok( views.html.offers(offers, searchForm, routes.TravelAgencyController.searchTrips, service.getAllCounties))
         }
 
       )

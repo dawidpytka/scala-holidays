@@ -2,7 +2,7 @@
 
 @import forms.SearchForm
 
-@(searchedOffers: ListBuffer[models.Offer], searchForm: Form[SearchForm],action_form: play.api.mvc.Call)(implicit messages: play.api.i18n.Messages)
+@(searchedOffers: ListBuffer[models.Offer], searchForm: Form[SearchForm],action_form: play.api.mvc.Call,countries : List[String])(implicit messages: play.api.i18n.Messages)
 
 @main("Offers"){
     <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("lib/bootstrap/css/bootstrap.min.css")">
@@ -15,6 +15,7 @@
         @helper.inputText(searchForm("minDaysAmount"), 'type -> "number")
         @helper.inputText(searchForm("starsAmount"),'type -> "number")
         @helper.inputText(searchForm("personsAmount"),'type -> "number")
+        @helper.select(searchForm("country"), options = countries.map(str => str->str))
         @if(action_form == routes.TravelAgencyController.searchTrips) {
             <div class="form-group">
                 <button type="submit" class="btn btn-success col-md-2 pull-right">Search</button>
@@ -42,12 +43,14 @@
                 </thead>
                 <tbody>
                 @for(offer <- searchedOffers){
+
                     <tr>
-                        <td class="font-text">@offer.no</td>
+                        <td class="font-text">@searchedOffers.indexOf(offer)</td>
                         <td class="font-text">@offer.name</td>
                         <td class="font-text">@offer.price</td>
                         <td class="font-text"><a href="@offer.link" target="_blank" >link</a></td>
                     </tr>
+
                 }
                 </tbody>
             </table>
