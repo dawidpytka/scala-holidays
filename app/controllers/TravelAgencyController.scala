@@ -36,7 +36,7 @@ class TravelAgencyController @Inject()(val controllerComponents: ControllerCompo
       "dateTo" -> Forms.of(dateTimeLocal),
           "minDaysAmount" -> number,
           "starsAmount" -> number,
-              "starsAmount" -> number
+              "personsAmount" -> number
     )
     (SearchForm.apply)(SearchForm.unapply))
 
@@ -51,7 +51,19 @@ class TravelAgencyController @Inject()(val controllerComponents: ControllerCompo
 
   def searchTrips = Action {
     implicit request =>
-      offers = service.getBestOffers(new DateTime().plusDays(60), new DateTime().plusDays(70), List("Czarnogóra", "Grecja"), 2)
-      Ok( views.html.offers(offers,searchForm, routes.TravelAgencyController.searchTrips))
+      searchForm.bindFromRequest.fold(
+        formWithErrors => {
+          println("BUU")
+          println(formWithErrors.errors.toString)
+          //offers = service.getBestOffers(new DateTime().plusDays(60), new DateTime().plusDays(70), List("Czarnogóra", "Grecja"), 2)
+          Ok( views.html.offers(offers,searchForm, routes.TravelAgencyController.searchTrips))
+        },
+        formCorrect => {
+          println("yupi")
+          offers = service.getBestOffers(new DateTime().plusDays(60), new DateTime().plusDays(70), List("Czarnogóra", "Grecja"), 2)
+          Ok( views.html.offers(offers,searchForm, routes.TravelAgencyController.searchTrips))
+        }
+
+      )
   }
 }

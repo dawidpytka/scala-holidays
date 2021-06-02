@@ -12,9 +12,9 @@
 
         @helper.inputText(searchForm("dateFrom"), 'type -> "date")
         @helper.inputText(searchForm("dateTo"), 'type -> "date")
-        @helper.inputText(searchForm("minDateAmount"))
-        @helper.inputText(searchForm("starsAmount"))
-        @helper.inputText(searchForm("personsAmount"))
+        @helper.inputText(searchForm("minDaysAmount"), 'type -> "number")
+        @helper.inputText(searchForm("starsAmount"),'type -> "number")
+        @helper.inputText(searchForm("personsAmount"),'type -> "number")
         @if(action_form == routes.TravelAgencyController.searchTrips) {
             <div class="form-group">
                 <button type="submit" class="btn btn-success col-md-2 pull-right">Search</button>
