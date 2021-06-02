@@ -14,20 +14,26 @@ import scala.collection.mutable.ListBuffer
 
 class TravelAgencyService @Inject() (){
 
-  def getBestOffers(dateFrom: DateTime, dateTo: DateTime, countries: List[String], numberOfPersons: Int = 1): ListBuffer[Offer] ={
+  def getBestOffers(dateFrom: DateTime, dateTo: DateTime, countries: List[String], numberOfPersons: Int = 1, minDays: Int = 1, minHotelRate: Int = 3): ListBuffer[Offer] ={
     var bestOffers = new ListBuffer[Offer]()
 
     bestOffers = ListBuffer.concat(
-      getRainbowOffers(dateFrom, dateTo, countries, numberOfPersons),
-      getItakaOffers(dateFrom, dateTo, countries, numberOfPersons),
-      getTraveliadaOffers(dateFrom, dateTo, countries, numberOfPersons))
+      getRainbowOffers(dateFrom, dateTo, countries, numberOfPersons, minDays, minHotelRate),
+      getItakaOffers(dateFrom, dateTo, countries, numberOfPersons, minDays, minHotelRate),
+      getTraveliadaOffers(dateFrom, dateTo, countries, numberOfPersons, minDays, minHotelRate))
 
     bestOffers = bestOffers.sortWith((o1,o2) => o1.price < o2.price)
     bestOffers.take(5)
   }
 
-  def getRainbowOffers(dateFrom: DateTime, dateTo: DateTime, countries: List[String], numberOfPersons: Int): List[Offer] = {
-    var body = """{"Konfiguracja":{"LiczbaPokoi":"1","Wiek":["1990-07-14","1990-07-14"]},"Sortowanie":{"CzyPoDacie":false,"CzyPoCenie":true,"CzyPoOcenach":false,"CzyPoPolecanych":false,"CzyDesc":false},"CzyCenaZaWszystkich":false,"CzyGrupowac":true,"MiastaWyjazdu":[], "Panstwa":["""
+  def getRainbowOffers(dateFrom: DateTime, dateTo: DateTime, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int): List[Offer] = {
+    var body = """{"Konfiguracja":{"LiczbaPokoi":"1","Wiek":["""
+    for (_ <- 1 to numberOfPersons) body = body + """"1990-07-14","""
+    body = body.dropRight(1)
+    body = body + """]},"Sortowanie":{"CzyPoDacie":false,"CzyPoCenie":true,"CzyPoOcenach":false,"CzyPoPolecanych":false,"CzyDesc":false},"CzyCenaZaWszystkich":false,"CzyGrupowac":true,"DlugoscPobytuMin":""""
+    body = body + minDays
+    body = body + """" ,"KategoriaHoteluMin":""""+ minHotelRate
+    body = body + """","MiastaWyjazdu":[], "Panstwa":["""
     if (countries != null && countries.nonEmpty) {
       for(country <- countries) yield body = body + """""""  + changePolishSigns(country.toLowerCase) + """","""
     }
@@ -36,7 +42,8 @@ class TravelAgencyService @Inject() (){
     if (dateFrom!=null) body = body + dateFrom.toString("yyyy-MM-dd")
     body = body + """","TerminWyjazduMax":""""
     if (dateTo!=null) body = body + dateTo.toString("yyyy-MM-dd")
-    body = body + """","CzyPotwierdzoneTerminy":false,"PokazywaneLotniska":"SAME","Paginacja":{"Przeczytane":"0","IloscDoPobrania":"18"},"CzyImprezaWeekendowa":false}"""
+
+    body = body + """","TypyTransportu":["air"],"CzyPotwierdzoneTerminy":false,"PokazywaneLotniska":"SAME","Paginacja":{"Przeczytane":"0","IloscDoPobrania":"18"},"CzyImprezaWeekendowa":false}"""
 
     val result = Http("https://rpl-api.r.pl/v3/wyszukiwarka/api/wyszukaj")
       .postData(body)
@@ -51,7 +58,9 @@ class TravelAgencyService @Inject() (){
       (__  \ "BazoweInformacje" \ "HotelID" ).read[Int] ~
         (__  \ "BazoweInformacje" \ "OfertaNazwa").read[String] ~
         ((__ \ "Ceny")(0) \ "CenaZaOsobeAktualna").read[Double] ~
-        (__  \ "BazoweInformacje" \ "OfertaURL").read[String]
+        (__  \ "BazoweInformacje" \ "OfertaURL").read[String] ~
+        ((__ \ "Ceny")(0) \ "LiczbaDni").read[Int] ~
+        (__ \ "BazoweInformacje" \ "GwiazdkiHotelu").read[Double]
       )(Offer)
 
     implicit val offersRead: Reads[List[Offer]] = Reads.list(offerRead)
@@ -59,7 +68,7 @@ class TravelAgencyService @Inject() (){
     offers.get.take(5)
   }
 
-  private def getItakaOffers(dateFrom: DateTime, dateTo: DateTime, countries: List[String], numberOfPersons: Int = 1): List[Offer] = {
+  private def getItakaOffers(dateFrom: DateTime, dateTo: DateTime, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int): List[Offer] = {
     var sourceUrl: String = "https://www.itaka.pl/wyniki-wyszukiwania/wakacje/?view=offerList"+"&adults="+numberOfPersons
     if (dateFrom!=null) sourceUrl = sourceUrl + "&date-from=" + dateFrom.toString("yyyy-MM-dd")
     if (dateTo!=null) sourceUrl = sourceUrl + "&date-to=" + dateTo.toString("yyyy-MM-dd")
@@ -69,7 +78,17 @@ class TravelAgencyService @Inject() (){
       for(country <- countries) yield sourceUrl = sourceUrl + changePolishSigns(country.toLowerCase) + "%2C"
       sourceUrl = sourceUrl.dropRight(3)
     }
+    sourceUrl = sourceUrl + "&hotel-rate=" + minHotelRate + "0"
+    sourceUrl = sourceUrl + "&review-rate=" + minHotelRate + "0"
     sourceUrl = sourceUrl + "&order=priceAsc"
+    sourceUrl = sourceUrl + "&transport=flight"
+
+    minDays match {
+      case 1 | 2 | 3 | 4 | 5 => sourceUrl = sourceUrl + "&duration=to6"
+      case 6 | 7 | 8 => sourceUrl = sourceUrl + "&duration=from6to9"
+      case 9 | 10 | 12 => sourceUrl = sourceUrl + "&duration=from9to12"
+    }
+    if(minDays > 12) sourceUrl = sourceUrl + "&duration=from13"
 
     val htmlDocument = Jsoup.connect(sourceUrl).get()
     val offersDomElements = htmlDocument.select(".offer").not(".promoOffer").asScala
@@ -78,31 +97,40 @@ class TravelAgencyService @Inject() (){
         no = 1,
         name = offerElement.select(".header_title").text(),
         price = offerElement.select(".current-price_value").html().substring(0,offerElement.select(".current-price_value").html().indexOf("&nbsp")).replaceAll("\\s", "").toDouble,
-        link = "https://www.itaka.pl"+offerElement.select(".offer_link").attr("href")
+        link = "https://www.itaka.pl"+offerElement.select(".offer_link").attr("href"),
+        duration = offerElement.select(".offer_date span").not(".offer_date_icon-container").text().substring(16, 17).toInt,
+        hotelRate = offerElement.select(".star").toArray().length - offerElement.select(".star_half").toArray().length * 0.5
       )
-    offersData.toList.take(5)
+
+    offersData.toList.filter(offer => offer.duration >= minDays).take(5)
   }
 
-  private def getTraveliadaOffers(dateFrom: DateTime, dateTo: DateTime, countries: List[String], numberOfPersons: Int = 1): List[Offer] = {
+  private def getTraveliadaOffers(dateFrom: DateTime, dateTo: DateTime, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int): List[Offer] = {
     var sourceUrl: String = "https://www.traveliada.pl/wczasy/"
     if (countries != null && countries.nonEmpty) {
       sourceUrl = sourceUrl + "do"
       for(country <- countries) yield sourceUrl = sourceUrl + "," + changePolishSigns(country.toLowerCase)
     }
+
     if (dateFrom!=null) sourceUrl = sourceUrl + "/t1," + dateFrom.toString("dd-MM-yyyy")
     if (dateTo!=null) sourceUrl = sourceUrl + "/t2," + dateTo.toString("dd-MM-yyyy")
     sourceUrl = sourceUrl + "/adt," + numberOfPersons
+    sourceUrl = sourceUrl + "/samolotem"
+    sourceUrl = sourceUrl + "/s," + minHotelRate + "-5"
     sourceUrl = sourceUrl + "/sort,cena"
+    sourceUrl = sourceUrl + "/dni," + minDays + "-21"
 
     val htmlDocument = Jsoup.connect(sourceUrl).get()
-    val recipesDomElements = htmlDocument.select("div.s2o").asScala
-    val offersData = for(offerElement <- recipesDomElements) yield Offer(
+    val offersDomElements = htmlDocument.select("div.s2o").asScala
+    val offersData = for(offerElement <- offersDomElements) yield Offer(
       no = 1,
       name = offerElement.select(".s2o_hot a").text(),
       price = offerElement.select(".s2o_mob1 .s2o_cena span").text().toDouble,
-      link = offerElement.select(".s2o_hot a").attr("href")
+      link = offerElement.select(".s2o_hot a").attr("href"),
+      duration = offerElement.select(".s2o_mob1 .s2o_dni").textNodes().get(0).text().substring(0,1).toInt,
+      hotelRate = offerElement.select(""".s2o_star img[src="/themes/images/star_1.png"]""").size()
     )
-    offersData.toList.take(5)
+    offersData.toList.filter(offer => offer.duration >= minDays).take(5)
   }
 
   def getAllCounties: List[String] = {
