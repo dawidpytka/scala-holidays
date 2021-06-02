@@ -60,7 +60,7 @@ class TravelAgencyController @Inject()(val controllerComponents: ControllerCompo
         },
         formCorrect => {
           println("yupi")
-          offers = service.getBestOffers(formCorrect.dateFrom, formCorrect.dateTo, List("Czarnogóra", "Grecja"), 2)
+          offers = service.getBestOffers(formCorrect.dateFrom, formCorrect.dateTo, List("Czarnogóra", "Grecja"), formCorrect.personsAmount, formCorrect.minDaysAmount, formCorrect.starsAmount )
           Ok( views.html.offers(offers, searchForm, routes.TravelAgencyController.searchTrips))
         }
 
