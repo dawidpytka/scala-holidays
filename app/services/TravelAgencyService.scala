@@ -26,7 +26,7 @@ class TravelAgencyService @Inject() (){
       getTraveliadaOffers(dateFrom, dateTo, countries, numberOfPersons, minDays, minHotelRate))
 
     bestOffers = bestOffers.sortWith((o1,o2) => o1.price < o2.price)
-    bestOffers.take(5)
+    bestOffers.take(10)
   }
 
   def getRainbowOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int): List[Offer] = {
@@ -60,6 +60,7 @@ class TravelAgencyService @Inject() (){
     implicit val offerRead: Reads[Offer] = (
       (__  \ "BazoweInformacje" \ "HotelID" ).read[Int] ~
         (__  \ "BazoweInformacje" \ "OfertaNazwa").read[String] ~
+        (__ \ "BazoweInformacje" \ "KodProduktu").read[String] ~
         ((__ \ "Ceny")(0) \ "CenaZaOsobeAktualna").read[Double] ~
         (__  \ "BazoweInformacje" \ "OfertaURL").read[String] ~
         ((__ \ "Ceny")(0) \ "LiczbaDni").read[Int] ~
@@ -72,12 +73,13 @@ class TravelAgencyService @Inject() (){
     val finalOffers = for (offer <- offers.get) yield Offer (
       no = offer.no,
       name = offer.name,
+      travelAgencyName = "Rainbow",
       price = offer.price,
       link = "https://r.pl" + offer.link,
       duration = offer.duration,
       hotelRate = offer.hotelRate
     )
-    finalOffers.take(5)
+    finalOffers.take(10)
   }
 
   private def getItakaOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int): List[Offer] = {
@@ -108,13 +110,14 @@ class TravelAgencyService @Inject() (){
       yield Offer (
         no = 1,
         name = offerElement.select(".header_title").text(),
+        travelAgencyName = "Itaka",
         price = offerElement.select(".current-price_value").html().substring(0,offerElement.select(".current-price_value").html().indexOf("&nbsp")).replaceAll("\\s", "").toDouble,
         link = "https://www.itaka.pl"+offerElement.select(".offer_link").attr("href"),
         duration = offerElement.select(".offer_date span").not(".offer_date_icon-container").text().substring(16, 17).toInt,
         hotelRate = offerElement.select(".star").toArray().length - offerElement.select(".star_half").toArray().length * 0.5
       )
 
-    offersData.toList.filter(offer => offer.duration >= minDays).take(5)
+    offersData.toList.filter(offer => offer.duration >= minDays).take(10)
   }
 
   private def getTraveliadaOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int): List[Offer] = {
@@ -137,12 +140,13 @@ class TravelAgencyService @Inject() (){
     val offersData = for(offerElement <- offersDomElements) yield Offer(
       no = 1,
       name = offerElement.select(".s2o_hot a").text(),
+      travelAgencyName = "Traveliada",
       price = offerElement.select(".s2o_mob1 .s2o_cena span").text().toDouble,
       link = offerElement.select(".s2o_hot a").attr("href"),
       duration = offerElement.select(".s2o_mob1 .s2o_dni").textNodes().get(0).text().substring(0,1).toInt,
       hotelRate = offerElement.select(""".s2o_star img[src="/themes/images/star_1.png"]""").size()
     )
-    offersData.toList.filter(offer => offer.duration >= minDays).take(5)
+    offersData.toList.filter(offer => offer.duration >= minDays).take(10)
   }
 
   def getAllCounties: List[String] = {
