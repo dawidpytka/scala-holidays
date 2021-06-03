@@ -37,7 +37,9 @@ class TravelAgencyController @Inject()(val controllerComponents: ControllerCompo
           "minDaysAmount" -> number(min = 1, max = 30),
           "starsAmount" -> number(min = 1, max = 5),
               "personsAmount" -> number(min = 1, max = 12),
-      "country" -> text
+      "country" -> text,
+      "isAllInclusive" -> boolean,
+      "isLastMinute" -> boolean
     )
     (SearchForm.apply)(SearchForm.unapply))
 

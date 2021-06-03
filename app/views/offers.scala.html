@@ -2,6 +2,7 @@
 
 @import forms.SearchForm
 
+@import views.html.helper.checkbox
 @(searchedOffers: ListBuffer[models.Offer], searchForm: Form[SearchForm],action_form: play.api.mvc.Call,countries : List[String])(implicit messages: play.api.i18n.Messages)
 
 @main("Offers"){
@@ -16,6 +17,9 @@
         @helper.inputText(searchForm("starsAmount"),'type -> "number")
         @helper.inputText(searchForm("personsAmount"),'type -> "number")
         @helper.select(searchForm("country"), options = countries.map(str => str->str))
+        @helper.checkbox(field = searchForm("isAllInclusive"))
+        @helper.checkbox(field = searchForm("isLastMinute"))
+
         @if(action_form == routes.TravelAgencyController.searchTrips) {
             <div class="form-group">
                 <button type="submit" class="btn btn-success col-md-2 pull-right">Search</button>
