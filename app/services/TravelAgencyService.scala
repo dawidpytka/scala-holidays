@@ -38,7 +38,7 @@ class TravelAgencyService @Inject() (){
     body = body + """" ,"KategoriaHoteluMin":""""+ minHotelRate
     body = body + """","MiastaWyjazdu":[], "Panstwa":["""
     if (countries != null && countries.nonEmpty) {
-      countries.foreach(c => body = body + """""""  + changePolishSigns(c.toLowerCase) + """",""")
+      countries.foreach(c => body = body + """""""  + changeExtraSigns(c.toLowerCase) + """",""")
     }
     body = body.dropRight(1)
     body = body + """],"TerminWyjazduMin":""""
@@ -54,6 +54,7 @@ class TravelAgencyService @Inject() (){
       .header("Charset", "UTF-8")
       .option(HttpOptions.readTimeout(1000000)).asString
 
+    if (result.body.isEmpty) return List()
     val json: JsValue = Json.parse(result.body)
     val trips = json \"Bloczki"
 
@@ -91,11 +92,10 @@ class TravelAgencyService @Inject() (){
 
     if (countries != null && countries.nonEmpty) {
       sourceUrl = sourceUrl + "&dest-region="
-      countries.foreach(c => sourceUrl = sourceUrl + changePolishSigns(c.toLowerCase) + "%2C")
+      countries.foreach(c => sourceUrl = sourceUrl + changeExtraSigns(c.toLowerCase) + "%2C")
       sourceUrl = sourceUrl.dropRight(3)
     }
     sourceUrl = sourceUrl + "&hotel-rate=" + minHotelRate + "0"
-    sourceUrl = sourceUrl + "&review-rate=" + minHotelRate + "0"
     sourceUrl = sourceUrl + "&order=priceAsc"
     sourceUrl = sourceUrl + "&transport=flight"
 
@@ -117,7 +117,7 @@ class TravelAgencyService @Inject() (){
         link = "https://www.itaka.pl"+offerElement.select(".offer_link").attr("href"),
         duration = offerElement.select(".offer_date span").not(".offer_date_icon-container").text().substring(16, 17).toInt,
         hotelRate = offerElement.select(".star").toArray().length - offerElement.select(".star_half").toArray().length * 0.5,
-        reviewRate = offerElement.select(".hotel-rank").text().toDouble
+        reviewRate = replaceNullStringToZeroString(offerElement.select(".hotel-rank").text()).toDouble
       )
 
     offersData.toList.filter(offer => offer.duration >= minDays).take(10)
@@ -127,7 +127,7 @@ class TravelAgencyService @Inject() (){
     var sourceUrl: String = "https://www.traveliada.pl/wczasy/"
     if (countries != null && countries.nonEmpty) {
       sourceUrl = sourceUrl + "do"
-      countries.foreach(c => sourceUrl = sourceUrl + "," + changePolishSigns(c.toLowerCase))
+      countries.foreach(c => sourceUrl = sourceUrl + "," + changeExtraSigns(c.toLowerCase))
     }
 
     if (dateFrom!=null) sourceUrl = sourceUrl + "/t1," + format2.format(dateFrom)
@@ -161,16 +161,12 @@ class TravelAgencyService @Inject() (){
     val sourceUrl: String = "https://www.itaka.pl/nasze-kierunki/"
     val htmlDocument = Jsoup.connect(s"${sourceUrl}").get()
     val countryDomElements = htmlDocument.select(".fhotel_region_header .fhotel_region_name").asScala
-    countryDomElements.map(_.text()).toList
+    countryDomElements.map(_.text()).toList.filter(c => !c.contains("(narty)"))
   }
 
-  def getNumbersOfPersons: List[Int] = {
-    (1 to 16).toList
-  }
-
-  private def changePolishSigns(str: String): String = {
-    val original = List("Ą", "ą", "Ć", "ć", "Ę", "ę", "Ł", "ł", "Ń", "ń", "Ó", "ó", "Ś", "ś", "Ź", "ź", "Ż", "ż")
-    val normalized = List("A", "a", "C", "c", "E", "e", "L", "l", "N", "n", "O", "o", "S", "s", "Z", "z", "Z", "z")
+  private def changeExtraSigns(str: String): String = {
+    val original = List("Ą", "ą", "Ć", "ć", "Ę", "ę", "Ł", "ł", "Ń", "ń", "Ó", "ó", "Ś", "ś", "Ź", "ź", "Ż", "ż", "ç", " ")
+    val normalized = List("A", "a", "C", "c", "E", "e", "L", "l", "N", "n", "O", "o", "S", "s", "Z", "z", "Z", "z", "c", "-")
 
     val newStr = for (c <- str) yield {
       val index = original.indexOf(c.toString)
