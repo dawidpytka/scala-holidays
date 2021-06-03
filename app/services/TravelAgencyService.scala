@@ -1,21 +1,29 @@
 package services
 
 import javax.inject.Inject
-import models.{Offer, RainbowOffer}
+import models.{Offer, ReadOffer}
 import org.jsoup.Jsoup
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
 import play.api.libs.json.{JsValue, Json, Reads, __}
 import scalaj.http.{Http, HttpOptions}
 
+import java.text.SimpleDateFormat
 import java.util.Date
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 
 class TravelAgencyService @Inject() (){
   val format1 = new java.text.SimpleDateFormat("yyyy-MM-dd")
   val format2 = new java.text.SimpleDateFormat("dd-MM-yyyy")
-
+  val format3 = new SimpleDateFormat("dd.MM.yyyy")
+  var countryCodesTUI: mutable.Map[String, String] = mutable.HashMap("ALBANIA"->"TIA", "ARUBA"->"AUA", "BARBADOS"->"BGI", "BUŁGARIA"->"BG",
+    "CHORWACJA"->"HR","CYPR"->"CY", "CZARNOGÓRA"->"TGD", "DJERBA"->"DJE", "DOMINIKANA"->"DO", "EGIPT"->"EG", "GRECJA"->"GR",
+    "HISZPANIA"->"ES", "INDONEZJA"->"ID", "JAMAJKA"->"MBJ", "KENIA"->"MBA", "KOSTARYKA"->"SJO", "KUBA"->"CU", "FNC"->"MADERA", "MALEDIWY"->"MLE",
+    "MALTA"->"MLA", "MAROKO"->"AGA", "MRU"->"MAURITIUS", "MEKSYK"->"CUN", "PANAMA"->"PTY", "PORTUGALIA"->"PT", "SESZELE"->"SZ",
+    "SRI LANKA"->"CMB","PORTUGALIA"->"PT", "STANY ZJEDNOCZONE"->"US", "TAJLANDIA"->"TH", "TUNEZJA"->"TN", "TURCJA"->"TR", "WŁOCHY"->"IT",
+    "WYSPY KANARYJSKIE"->"IC", "WYSPY ZIELONEGO PRZYLĄDKA"->"CV", "WŁOCHY"->"IT", "ZANZIBAR"->"ZNZ", "ZJEDNOCZONE EMIRATY ARABSKIE"->"ZEA")
 
   def getBestOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int = 1, minDays: Int = 1, minHotelRate: Int = 3, onlyLastMinute: Boolean = false, onlyAllInclusive: Boolean = false): ListBuffer[Offer] ={
     var bestOffers = new ListBuffer[Offer]()
@@ -23,8 +31,8 @@ class TravelAgencyService @Inject() (){
     bestOffers = ListBuffer.concat(
       getRainbowOffers(dateFrom, dateTo, countries, numberOfPersons, minDays, minHotelRate, onlyLastMinute, onlyAllInclusive),
       getItakaOffers(dateFrom, dateTo, countries, numberOfPersons, minDays, minHotelRate, onlyLastMinute, onlyAllInclusive),
-      getTraveliadaOffers(dateFrom, dateTo, countries, numberOfPersons, minDays, minHotelRate, onlyLastMinute, onlyAllInclusive))
-
+      getTraveliadaOffers(dateFrom, dateTo, countries, numberOfPersons, minDays, minHotelRate, onlyLastMinute, onlyAllInclusive),
+      getTUIOffers(dateFrom, dateTo, countries, numberOfPersons, minDays, minHotelRate, onlyLastMinute, onlyAllInclusive))
     bestOffers = bestOffers.sortWith((o1,o2) => o1.price < o2.price)
     bestOffers.take(10)
   }
@@ -60,7 +68,7 @@ class TravelAgencyService @Inject() (){
     val json: JsValue = Json.parse(result.body)
     val trips = json \"Bloczki"
 
-    implicit val offerRead: Reads[RainbowOffer] = (
+    implicit val offerRead: Reads[ReadOffer] = (
         (__  \ "BazoweInformacje" \ "OfertaNazwa").read[String] ~
         ((__ \ "Ceny")(0) \ "CenaZaOsobeAktualna").read[Double] ~
         (__  \ "BazoweInformacje" \ "OfertaURL").read[String] ~
@@ -68,10 +76,10 @@ class TravelAgencyService @Inject() (){
         (__ \ "BazoweInformacje" \ "GwiazdkiHotelu").read[Double] ~
         (__ \ "Ocena" \ "Ocena").readWithDefault(0.0) ~
         ((__ \ "Wyzywienia")(0) \ "Nazwa").read[String]
-      )(RainbowOffer)
+      )(ReadOffer)
 
-    implicit val offersRead: Reads[List[RainbowOffer]] = Reads.list(offerRead)
-    val offers = trips.get.validate[List[RainbowOffer]](offersRead)
+    implicit val offersRead: Reads[List[ReadOffer]] = Reads.list(offerRead)
+    val offers = trips.get.validate[List[ReadOffer]](offersRead)
 
     val finalOffers = for (offer <- offers.get) yield Offer (
       no = 0,
@@ -160,6 +168,57 @@ class TravelAgencyService @Inject() (){
       isAllInclusive = offerElement.select(".s2o_w").text().contains("all inclusive")
     )
     offersData.toList.filter(offer => offer.duration >= minDays).take(10)
+  }
+
+  private def getTUIOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int,onlyLastMinute: Boolean, onlyAllInclusive: Boolean): List[Offer] = {
+    val country = countries.head
+    var countryShortcut = ""
+    if(!countryCodesTUI.contains(country.toUpperCase())) {
+      return null
+    } else {
+      countryShortcut = countryCodesTUI.get(country.toUpperCase()).get
+    }
+    val dateFromFormated = format3.format(dateFrom)
+    val dateToFormatted = format3.format(dateTo)
+    var body = """{"offerType":"BY_PLANE","childrenBirthdays":[],"departureDateFrom":""""+dateFromFormated+"""","departureDateTo":""""+dateToFormatted+"""","departuresCodes":[],"destinationsCodes":["""" + countryShortcut
+    body = body + """"],"numberOfAdults":""" + numberOfPersons+""","durationFrom":""""+minDays+"""","durationTo":"30","site":"wypoczynek/wyniki-wyszukiwania-samolot","metaData":{"page":0,"pageSize":30,"sorting":"price"},"filters":[{"filterId":"priceSelector","selectedValues":[]},{"filterId":"board","selectedValues":[]},{"filterId":"amountRange","selectedValues":[""]},
+                 {"filterId":"flight_category","selectedValues":[]},{"filterId":"minHotelCategory","selectedValues":[""""
+    body = body + minHotelRate+"""s"]},{"filterId":"tripAdvisorRating","selectedValues":["defaultTripAdvisorRating"]},{"filterId":"beach_distance","selectedValues":["defaultBeachDistance"]},{"filterId":"facilities","selectedValues":[]},{"filterId":"WIFI","selectedValues":[]},
+                              {"filterId":"sport_and_wellness","selectedValues":[]},{"filterId":"room_type","selectedValues":[]},{"filterId":"additionalType","selectedValues":[]}]}"""
+    val result = Http("https://www.tui.pl/search/offers")
+      .postData(body)
+      .header("Content-Type", "application/json")
+      .header("Charset", "UTF-8")
+      .option(HttpOptions.readTimeout(1000000)).asString
+    val json: JsValue = Json.parse(result.body)
+    val trips = json \ "offers"
+
+    implicit val offerRead: Reads[ReadOffer] = (
+        (__  \ "hotelName").read[String] ~
+        (__ \ "discountPerPersonPrice").read[String].map(f => f.toDouble) ~
+        (__  \ "offerUrl").read[String] ~
+        (__ \ "duration").read[Int] ~
+        (__ \ "hotelStandard").read[Double] ~
+        (__ \ "tripAdvisorRating").readWithDefault(0.0)~
+        (__ \ "boardType").read[String]
+      )(ReadOffer)
+    implicit val offersRead: Reads[List[ReadOffer]] = Reads.list(offerRead)
+    val offers = trips.get.validate[List[ReadOffer]](offersRead)
+    println("sas")
+
+
+    val finalOffers = for (offer <- offers.get) yield Offer (
+      no = 0,
+      name = offer.name,
+      travelAgencyName = "TUI",
+      price = offer.price,
+      link = "https://www.tui.pl" + offer.link,
+      duration = offer.duration,
+      hotelRate = offer.hotelRate,
+      reviewRate = offer.reviewRate,
+      isAllInclusive = offer.foodStandard.toLowerCase.contains("all inclusive")
+    )
+    finalOffers.take(10)
   }
 
   private def replaceNullStringToZeroString(string: String): String = {
