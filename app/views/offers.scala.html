@@ -8,7 +8,7 @@
 @main("Offers"){
     <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("lib/bootstrap/css/bootstrap.min.css")">
     <script src="@routes.Assets.versioned("lib/bootstrap/js/bootstrap.min.js")" crossorigin="anonymous"></script>
-
+    <div class="col-md-2">
     @helper.form(action = action_form) {
 
         @helper.inputText(searchForm("dateFrom"), 'type -> "date")
@@ -22,10 +22,12 @@
 
         @if(action_form == routes.TravelAgencyController.searchTrips) {
             <div class="form-group">
-                <button type="submit" class="btn btn-success col-md-2 pull-right">Search</button>
+                <button type="submit" class="btn btn-success pull-left">Search</button>
             </div>
         }
     }
+    </div>
+    <div class="col-md-10">
     <div class="row">
         <div class="col-md-12">
             <h1 class="font-bold">Offers</h1>
@@ -70,5 +72,6 @@
             <h3>No data for this params.</h3>
         }
         </div>
+    </div>
     </div>
 }
