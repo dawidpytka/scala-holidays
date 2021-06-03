@@ -176,12 +176,19 @@ class TravelAgencyService @Inject() (){
     if(!countryCodesTUI.contains(country.toUpperCase())) {
       return null
     } else {
-      countryShortcut = countryCodesTUI.get(country.toUpperCase()).get
+      countryShortcut = countryCodesTUI(country.toUpperCase())
     }
-    val dateFromFormated = format3.format(dateFrom)
+
+    var site =""
+    if(onlyLastMinute) {
+      site="last-minute"
+    } else {
+      site = "wypoczynek/wyniki-wyszukiwania-samolot"
+    }
+    val dateFromFormatted = format3.format(dateFrom)
     val dateToFormatted = format3.format(dateTo)
-    var body = """{"offerType":"BY_PLANE","childrenBirthdays":[],"departureDateFrom":""""+dateFromFormated+"""","departureDateTo":""""+dateToFormatted+"""","departuresCodes":[],"destinationsCodes":["""" + countryShortcut
-    body = body + """"],"numberOfAdults":""" + numberOfPersons+""","durationFrom":""""+minDays+"""","durationTo":"30","site":"wypoczynek/wyniki-wyszukiwania-samolot","metaData":{"page":0,"pageSize":30,"sorting":"price"},"filters":[{"filterId":"priceSelector","selectedValues":[]},{"filterId":"board","selectedValues":[]},{"filterId":"amountRange","selectedValues":[""]},
+    var body = """{"offerType":"BY_PLANE","childrenBirthdays":[],"departureDateFrom":""""+dateFromFormatted+"""","departureDateTo":""""+dateToFormatted+"""","departuresCodes":[],"destinationsCodes":["""" + countryShortcut
+    body = body + """"],"numberOfAdults":""" + numberOfPersons+""","durationFrom":""""+minDays+"""","durationTo":"30","site":""""+site+"""","metaData":{"page":0,"pageSize":30,"sorting":"price"},"filters":[{"filterId":"priceSelector","selectedValues":[]},{"filterId":"board","selectedValues":[]},{"filterId":"amountRange","selectedValues":[""]},
                  {"filterId":"flight_category","selectedValues":[]},{"filterId":"minHotelCategory","selectedValues":[""""
     body = body + minHotelRate+"""s"]},{"filterId":"tripAdvisorRating","selectedValues":["defaultTripAdvisorRating"]},{"filterId":"beach_distance","selectedValues":["defaultBeachDistance"]},{"filterId":"facilities","selectedValues":[]},{"filterId":"WIFI","selectedValues":[]},
                               {"filterId":"sport_and_wellness","selectedValues":[]},{"filterId":"room_type","selectedValues":[]},{"filterId":"additionalType","selectedValues":[]}]}"""
@@ -198,13 +205,12 @@ class TravelAgencyService @Inject() (){
         (__ \ "discountPerPersonPrice").read[String].map(f => f.toDouble) ~
         (__  \ "offerUrl").read[String] ~
         (__ \ "duration").read[Int] ~
-        (__ \ "hotelStandard").read[Double] ~
+        (__ \ "hotelStandard").readWithDefault(0.0) ~
         (__ \ "tripAdvisorRating").readWithDefault(0.0)~
         (__ \ "boardType").read[String]
       )(ReadOffer)
     implicit val offersRead: Reads[List[ReadOffer]] = Reads.list(offerRead)
     val offers = trips.get.validate[List[ReadOffer]](offersRead)
-    println("sas")
 
 
     val finalOffers = for (offer <- offers.get) yield Offer (
