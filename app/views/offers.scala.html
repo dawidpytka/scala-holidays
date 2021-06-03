@@ -2,7 +2,6 @@
 
 @import forms.SearchForm
 
-@import views.html.helper.checkbox
 @(searchedOffers: ListBuffer[models.Offer], searchForm: Form[SearchForm],action_form: play.api.mvc.Call,countries : List[String])(implicit messages: play.api.i18n.Messages)
 
 @main("Offers"){
@@ -49,7 +48,6 @@
                         <th class="font-text">Stars</th>
                         <th class="font-text">Review rate</th>
                         <th class="font-text">Is AllIn</th>
-                        <th class="font-text">Last Minute</th>
                         <th class="font-text">Link</th>
                     </tr>
                 </thead>
@@ -65,7 +63,6 @@
                         <td class="font-text">@offer.hotelRate/5</td>
                         <td class="font-text">@offer.reviewRate/6</td>
                         <td class="font-text">@offer.isAllInclusive</td>
-                        <td class="font-text">@offer.isLastMinute</td>
                         <td class="font-text"><a href="@offer.link" target="_blank" >link</a></td>
                     </tr>
 

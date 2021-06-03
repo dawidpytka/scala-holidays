@@ -1,29 +1,20 @@
 package controllers
 
-
-
 import forms.SearchForm
 import models.Offer
-import org.joda.time.DateTime
+import services.TravelAgencyService
+
 import play.api.data.Forms.{mapping, text}
 import play.api.mvc.{Action, AnyContent, BaseController, ControllerComponents, Result}
 import play.api.data.{Form, Forms}
-import play.api.data.validation.Constraints._
-
-import scala.collection.mutable.ListBuffer
 import play.api.data.format._
-import services.TravelAgencyService
-import javax.inject.Singleton
-import java.util.Date
-import javax.inject.Inject
-import scala.collection.mutable.ListBuffer
 import play.api.data.Forms._
-
-import javax.inject.Inject
-
 import play.api.i18n.I18nSupport
 
-import play.api.i18n.MessagesApi
+import javax.inject.Singleton
+import javax.inject.Inject
+import java.util.Date
+import scala.collection.mutable.ListBuffer
 
 
 @Singleton
@@ -63,7 +54,7 @@ class TravelAgencyController @Inject()(val controllerComponents: ControllerCompo
         },
         formCorrect => {
           println("yupi")
-          offers = service.getBestOffers(formCorrect.dateFrom, formCorrect.dateTo, List(formCorrect.Country), formCorrect.personsAmount, formCorrect.minDaysAmount, formCorrect.starsAmount )
+          offers = service.getBestOffers(formCorrect.dateFrom, formCorrect.dateTo, List(formCorrect.Country), formCorrect.personsAmount, formCorrect.minDaysAmount, formCorrect.starsAmount, formCorrect.isLastMinute, formCorrect.isAllInclusive )
           Ok( views.html.offers(offers, searchForm, routes.TravelAgencyController.searchTrips, service.getAllCounties))
         }
 

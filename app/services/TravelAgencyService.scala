@@ -17,19 +17,19 @@ class TravelAgencyService @Inject() (){
   val format2 = new java.text.SimpleDateFormat("dd-MM-yyyy")
 
 
-  def getBestOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int = 1, minDays: Int = 1, minHotelRate: Int = 3): ListBuffer[Offer] ={
+  def getBestOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int = 1, minDays: Int = 1, minHotelRate: Int = 3, onlyLastMinute: Boolean = false, onlyAllInclusive: Boolean = false): ListBuffer[Offer] ={
     var bestOffers = new ListBuffer[Offer]()
 
     bestOffers = ListBuffer.concat(
-      getRainbowOffers(dateFrom, dateTo, countries, numberOfPersons, minDays, minHotelRate),
-      getItakaOffers(dateFrom, dateTo, countries, numberOfPersons, minDays, minHotelRate),
-      getTraveliadaOffers(dateFrom, dateTo, countries, numberOfPersons, minDays, minHotelRate))
+      getRainbowOffers(dateFrom, dateTo, countries, numberOfPersons, minDays, minHotelRate, onlyLastMinute, onlyAllInclusive),
+      getItakaOffers(dateFrom, dateTo, countries, numberOfPersons, minDays, minHotelRate, onlyLastMinute, onlyAllInclusive),
+      getTraveliadaOffers(dateFrom, dateTo, countries, numberOfPersons, minDays, minHotelRate, onlyLastMinute, onlyAllInclusive))
 
     bestOffers = bestOffers.sortWith((o1,o2) => o1.price < o2.price)
     bestOffers.take(10)
   }
 
-  def getRainbowOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int): List[Offer] = {
+  def getRainbowOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int, onlyLastMinute: Boolean, onlyAllInclusive: Boolean): List[Offer] = {
     var body = """{"Konfiguracja":{"LiczbaPokoi":"1","Wiek":["""
     for (_ <- 1 to numberOfPersons) body = body + """"1990-07-14","""
     body = body.dropRight(1)
@@ -41,6 +41,8 @@ class TravelAgencyService @Inject() (){
       countries.foreach(c => body = body + """""""  + changeExtraSigns(c.toLowerCase) + """",""")
     }
     body = body.dropRight(1)
+    if(onlyLastMinute) body = body + """],"Promocje": ["last-minute""""
+    if(onlyAllInclusive) body = body + """],"Wyzywienia": ["all-inclusive""""
     body = body + """],"TerminWyjazduMin":""""
     if (dateFrom!=null) body = body + format1.format(dateFrom)
     body = body + """","TerminWyjazduMax":""""
@@ -65,7 +67,6 @@ class TravelAgencyService @Inject() (){
         ((__ \ "Ceny")(0) \ "LiczbaDni").read[Int] ~
         (__ \ "BazoweInformacje" \ "GwiazdkiHotelu").read[Double] ~
         (__ \ "Ocena" \ "Ocena").readWithDefault(0.0) ~
-        ((__ \ "Fiszki" \ "Pionowo")(0) \ "Nazwa").read[String] ~
         ((__ \ "Wyzywienia")(0) \ "Nazwa").read[String]
       )(RainbowOffer)
 
@@ -81,23 +82,24 @@ class TravelAgencyService @Inject() (){
       duration = offer.duration,
       hotelRate = offer.hotelRate,
       reviewRate = offer.reviewRate,
-      isLastMinute = offer.lastMinuteName.contains("Last Minute"),
-      isAllInclusive = offer.foodStandard == "All inclusive"
+      isAllInclusive = offer.foodStandard.toLowerCase.contains("all inclusive")
     )
     finalOffers.take(10)
   }
 
-  private def getItakaOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int): List[Offer] = {
+  private def getItakaOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int, onlyLastMinute: Boolean, onlyAllInclusive: Boolean): List[Offer] = {
     var sourceUrl: String = "https://www.itaka.pl/wyniki-wyszukiwania/wakacje/?view=offerList"+"&adults="+numberOfPersons
     if (dateFrom!=null) sourceUrl = sourceUrl + "&date-from=" + format1.format(dateFrom)
     if (dateTo!=null) sourceUrl = sourceUrl + "&date-to=" + format1.format(dateTo)
 
+    if(onlyAllInclusive) sourceUrl = sourceUrl + "&food=allInclusive"
     if (countries != null && countries.nonEmpty) {
       sourceUrl = sourceUrl + "&dest-region="
       countries.foreach(c => sourceUrl = sourceUrl + changeExtraSigns(c.toLowerCase) + "%2C")
       sourceUrl = sourceUrl.dropRight(3)
     }
     sourceUrl = sourceUrl + "&hotel-rate=" + minHotelRate + "0"
+    if (onlyLastMinute) sourceUrl = sourceUrl + "&promo=lastMinute"
     sourceUrl = sourceUrl + "&order=priceAsc"
     sourceUrl = sourceUrl + "&transport=flight"
 
@@ -109,6 +111,7 @@ class TravelAgencyService @Inject() (){
     if(minDays > 12) sourceUrl = sourceUrl + "&duration=from13"
 
     val htmlDocument = Jsoup.connect(sourceUrl).get()
+    if (!htmlDocument.select(".empty-results").isEmpty) return List()
     val offersDomElements = htmlDocument.select(".offer").not(".promoOffer").asScala
     val offersData = for(offerElement <- offersDomElements)
       yield Offer (
@@ -120,19 +123,20 @@ class TravelAgencyService @Inject() (){
         duration = offerElement.select(".offer_date span").not(".offer_date_icon-container").text().substring(16, 17).toInt,
         hotelRate = offerElement.select(".star").toArray().length - offerElement.select(".star_half").toArray().length * 0.5,
         reviewRate = replaceNullStringToZeroString(offerElement.select(".hotel-rank").text()).toDouble,
-        isLastMinute = offerElement.select(".offer_attribute .attribute_label").text() == "Last Minute",
         isAllInclusive = offerElement.select(".offer_food").text() == "All inclusive"
       )
 
     offersData.toList.filter(offer => offer.duration >= minDays).take(10)
   }
 
-  private def getTraveliadaOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int): List[Offer] = {
+  private def getTraveliadaOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int, onlyLastMinute: Boolean, onlyAllInclusive: Boolean): List[Offer] = {
     var sourceUrl: String = "https://www.traveliada.pl/wczasy/"
     if (countries != null && countries.nonEmpty) {
       sourceUrl = sourceUrl + "do"
       countries.foreach(c => sourceUrl = sourceUrl + "," + changeExtraSigns(c.toLowerCase))
     }
+    if (onlyLastMinute) sourceUrl = sourceUrl + "/last-minute"
+    if (onlyAllInclusive) sourceUrl = sourceUrl + "/all-inclusive"
 
     if (dateFrom!=null) sourceUrl = sourceUrl + "/t1," + format2.format(dateFrom)
     if (dateTo!=null) sourceUrl = sourceUrl + "/t2," + format2.format(dateTo)
@@ -153,7 +157,6 @@ class TravelAgencyService @Inject() (){
       duration = offerElement.select(".s2o_mob1 .s2o_dni").textNodes().get(0).text().substring(0,1).toInt,
       hotelRate = offerElement.select(""".s2o_star img[src="/themes/images/star_1.png"]""").size(),
       reviewRate = BigDecimal(replaceNullStringToZeroString(offerElement.select(".s2o_ocena").text()).substring(0,3).toDouble*6/10).setScale(1, BigDecimal.RoundingMode.HALF_UP).toDouble,
-      isLastMinute = offerElement.select(".s2o_last span").text() == "last minute",
       isAllInclusive = offerElement.select(".s2o_w").text().contains("all inclusive")
     )
     offersData.toList.filter(offer => offer.duration >= minDays).take(10)
