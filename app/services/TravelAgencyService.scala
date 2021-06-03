@@ -148,7 +148,7 @@ class TravelAgencyService @Inject() (){
       link = offerElement.select(".s2o_hot a").attr("href"),
       duration = offerElement.select(".s2o_mob1 .s2o_dni").textNodes().get(0).text().substring(0,1).toInt,
       hotelRate = offerElement.select(""".s2o_star img[src="/themes/images/star_1.png"]""").size(),
-      reviewRate = replaceNullStringToZeroString(offerElement.select(".s2o_ocena").text()).substring(0,3).toDouble*6/10
+      reviewRate = BigDecimal(replaceNullStringToZeroString(offerElement.select(".s2o_ocena").text()).substring(0,3).toDouble*6/10).setScale(1, BigDecimal.RoundingMode.HALF_UP).toDouble
     )
     offersData.toList.filter(offer => offer.duration >= minDays).take(10)
   }
