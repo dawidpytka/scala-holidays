@@ -1,7 +1,7 @@
 package services
 
 import javax.inject.Inject
-import models.Offer
+import models.{Offer, RainbowOffer}
 import org.jsoup.Jsoup
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
 import play.api.libs.json.{JsValue, Json, Reads, __}
@@ -58,29 +58,31 @@ class TravelAgencyService @Inject() (){
     val json: JsValue = Json.parse(result.body)
     val trips = json \"Bloczki"
 
-    implicit val offerRead: Reads[Offer] = (
-      (__  \ "BazoweInformacje" \ "HotelID" ).read[Int] ~
+    implicit val offerRead: Reads[RainbowOffer] = (
         (__  \ "BazoweInformacje" \ "OfertaNazwa").read[String] ~
-        (__ \ "").readWithDefault("") ~
         ((__ \ "Ceny")(0) \ "CenaZaOsobeAktualna").read[Double] ~
         (__  \ "BazoweInformacje" \ "OfertaURL").read[String] ~
         ((__ \ "Ceny")(0) \ "LiczbaDni").read[Int] ~
         (__ \ "BazoweInformacje" \ "GwiazdkiHotelu").read[Double] ~
-        (__ \ "Ocena" \ "Ocena").readWithDefault(0.0)
-      )(Offer)
+        (__ \ "Ocena" \ "Ocena").readWithDefault(0.0) ~
+        ((__ \ "Fiszki" \ "Pionowo")(0) \ "Nazwa").read[String] ~
+        ((__ \ "Wyzywienia")(0) \ "Nazwa").read[String]
+      )(RainbowOffer)
 
-    implicit val offersRead: Reads[List[Offer]] = Reads.list(offerRead)
-    val offers = trips.get.validate[List[Offer]](offersRead)
+    implicit val offersRead: Reads[List[RainbowOffer]] = Reads.list(offerRead)
+    val offers = trips.get.validate[List[RainbowOffer]](offersRead)
 
     val finalOffers = for (offer <- offers.get) yield Offer (
-      no = offer.no,
+      no = 0,
       name = offer.name,
       travelAgencyName = "Rainbow",
       price = offer.price,
       link = "https://r.pl" + offer.link,
       duration = offer.duration,
       hotelRate = offer.hotelRate,
-      reviewRate = offer.reviewRate
+      reviewRate = offer.reviewRate,
+      isLastMinute = offer.lastMinuteName.contains("Last Minute"),
+      isAllInclusive = offer.foodStandard == "All inclusive"
     )
     finalOffers.take(10)
   }
@@ -117,7 +119,9 @@ class TravelAgencyService @Inject() (){
         link = "https://www.itaka.pl"+offerElement.select(".offer_link").attr("href"),
         duration = offerElement.select(".offer_date span").not(".offer_date_icon-container").text().substring(16, 17).toInt,
         hotelRate = offerElement.select(".star").toArray().length - offerElement.select(".star_half").toArray().length * 0.5,
-        reviewRate = replaceNullStringToZeroString(offerElement.select(".hotel-rank").text()).toDouble
+        reviewRate = replaceNullStringToZeroString(offerElement.select(".hotel-rank").text()).toDouble,
+        isLastMinute = offerElement.select(".offer_attribute .attribute_label").text() == "Last Minute",
+        isAllInclusive = offerElement.select(".offer_food").text() == "All inclusive"
       )
 
     offersData.toList.filter(offer => offer.duration >= minDays).take(10)
@@ -148,7 +152,9 @@ class TravelAgencyService @Inject() (){
       link = offerElement.select(".s2o_hot a").attr("href"),
       duration = offerElement.select(".s2o_mob1 .s2o_dni").textNodes().get(0).text().substring(0,1).toInt,
       hotelRate = offerElement.select(""".s2o_star img[src="/themes/images/star_1.png"]""").size(),
-      reviewRate = BigDecimal(replaceNullStringToZeroString(offerElement.select(".s2o_ocena").text()).substring(0,3).toDouble*6/10).setScale(1, BigDecimal.RoundingMode.HALF_UP).toDouble
+      reviewRate = BigDecimal(replaceNullStringToZeroString(offerElement.select(".s2o_ocena").text()).substring(0,3).toDouble*6/10).setScale(1, BigDecimal.RoundingMode.HALF_UP).toDouble,
+      isLastMinute = offerElement.select(".s2o_last span").text() == "last minute",
+      isAllInclusive = offerElement.select(".s2o_w").text().contains("all inclusive")
     )
     offersData.toList.filter(offer => offer.duration >= minDays).take(10)
   }
