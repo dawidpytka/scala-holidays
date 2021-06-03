@@ -233,7 +233,7 @@ class TravelAgencyService @Inject() (){
 
   def getAllCounties: List[String] = {
     val sourceUrl: String = "https://www.itaka.pl/nasze-kierunki/"
-    val htmlDocument = Jsoup.connect(s"${sourceUrl}").get()
+    val htmlDocument = Jsoup.connect(s"${sourceUrl}").timeout(1000000).get()
     val countryDomElements = htmlDocument.select(".fhotel_region_header .fhotel_region_name").asScala
     countryDomElements.map(_.text()).toList.filter(c => !c.contains("(narty)"))
   }
