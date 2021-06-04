@@ -34,7 +34,7 @@ class TravelAgencyService @Inject() (){
       getTraveliadaOffers(dateFrom, dateTo, countries, numberOfPersons, minDays, minHotelRate, onlyLastMinute, onlyAllInclusive),
       getTUIOffers(dateFrom, dateTo, countries, numberOfPersons, minDays, minHotelRate, onlyLastMinute, onlyAllInclusive))
     bestOffers = bestOffers.sortWith((o1,o2) => o1.price < o2.price)
-    bestOffers.take(10)
+    bestOffers.take(15)
   }
 
   def getRainbowOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int, onlyLastMinute: Boolean, onlyAllInclusive: Boolean): List[Offer] = {
@@ -92,7 +92,7 @@ class TravelAgencyService @Inject() (){
       reviewRate = offer.reviewRate,
       isAllInclusive = offer.foodStandard.toLowerCase.contains("all inclusive")
     )
-    finalOffers.take(10)
+    finalOffers.take(15)
   }
 
   private def getItakaOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int, onlyLastMinute: Boolean, onlyAllInclusive: Boolean): List[Offer] = {
@@ -134,7 +134,7 @@ class TravelAgencyService @Inject() (){
         isAllInclusive = offerElement.select(".offer_food").text() == "All inclusive"
       )
 
-    offersData.toList.filter(offer => offer.duration >= minDays).take(10)
+    offersData.toList.filter(offer => offer.duration >= minDays).take(15)
   }
 
   private def getTraveliadaOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int, onlyLastMinute: Boolean, onlyAllInclusive: Boolean): List[Offer] = {
@@ -167,7 +167,7 @@ class TravelAgencyService @Inject() (){
       reviewRate = BigDecimal(replaceNullStringToZeroString(offerElement.select(".s2o_ocena").text()).substring(0,3).toDouble*6/10).setScale(1, BigDecimal.RoundingMode.HALF_UP).toDouble,
       isAllInclusive = offerElement.select(".s2o_w").text().contains("all inclusive")
     )
-    offersData.toList.filter(offer => offer.duration >= minDays).take(10)
+    offersData.toList.filter(offer => offer.duration >= minDays).take(15)
   }
 
   private def getTUIOffers(dateFrom: Date, dateTo: Date, countries: List[String], numberOfPersons: Int, minDays: Int, minHotelRate: Int,onlyLastMinute: Boolean, onlyAllInclusive: Boolean): List[Offer] = {
@@ -180,18 +180,16 @@ class TravelAgencyService @Inject() (){
     }
 
     var site =""
-    if(onlyLastMinute) {
-      site="last-minute"
-    } else {
-      site = "wypoczynek/wyniki-wyszukiwania-samolot"
-    }
+    if(onlyLastMinute) site="last-minute"
+
     val dateFromFormatted = format3.format(dateFrom)
     val dateToFormatted = format3.format(dateTo)
     var body = """{"offerType":"BY_PLANE","childrenBirthdays":[],"departureDateFrom":""""+dateFromFormatted+"""","departureDateTo":""""+dateToFormatted+"""","departuresCodes":[],"destinationsCodes":["""" + countryShortcut
     body = body + """"],"numberOfAdults":""" + numberOfPersons+""","durationFrom":""""+minDays+"""","durationTo":"30","site":""""+site+"""","metaData":{"page":0,"pageSize":30,"sorting":"price"},"filters":[{"filterId":"priceSelector","selectedValues":[]},{"filterId":"board","selectedValues":[]},{"filterId":"amountRange","selectedValues":[""]},
                  {"filterId":"flight_category","selectedValues":[]},{"filterId":"minHotelCategory","selectedValues":[""""
-    body = body + minHotelRate+"""s"]},{"filterId":"tripAdvisorRating","selectedValues":["defaultTripAdvisorRating"]},{"filterId":"beach_distance","selectedValues":["defaultBeachDistance"]},{"filterId":"facilities","selectedValues":[]},{"filterId":"WIFI","selectedValues":[]},
-                              {"filterId":"sport_and_wellness","selectedValues":[]},{"filterId":"room_type","selectedValues":[]},{"filterId":"additionalType","selectedValues":[]}]}"""
+    body = body + minHotelRate+"""s"]},{"filterId":"tripAdvisorRating","selectedValues":["defaultTripAdvisorRating"]},{"filterId":"beach_distance","selectedValues":["defaultBeachDistance"]},{"filterId":"facilities","selectedValues":[]},{"filterId":"WIFI","selectedValues":[]}"""
+    if (onlyAllInclusive) body = body + """,{"filterId":"board","selectedValues":["GT06-AI GT06-FBP"]}"""
+      body = body + """,{"filterId":"sport_and_wellness","selectedValues":[]},{"filterId":"room_type","selectedValues":[]},{"filterId":"additionalType","selectedValues":[]}]}"""
     val result = Http("https://www.tui.pl/search/offers")
       .postData(body)
       .header("Content-Type", "application/json")
@@ -224,7 +222,7 @@ class TravelAgencyService @Inject() (){
       reviewRate = offer.reviewRate,
       isAllInclusive = offer.foodStandard.toLowerCase.contains("all inclusive")
     )
-    finalOffers.take(10)
+    finalOffers.take(15)
   }
 
   private def replaceNullStringToZeroString(string: String): String = {
