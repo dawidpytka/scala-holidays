@@ -2,11 +2,11 @@
 
 @import forms.SearchForm
 
-@(searchedOffers: ListBuffer[models.Offer], searchForm: Form[SearchForm],action_form: play.api.mvc.Call,countries : List[String])(implicit messages: play.api.i18n.Messages)
+@(searchedOffers: ListBuffer[models.Offer], searchForm: Form[SearchForm],action_form: play.api.mvc.Call,countries : ListBuffer[String])(implicit messages: play.api.i18n.Messages)
 
 @main("Offers"){
-    <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("lib/bootstrap/css/bootstrap.min.css")">
-    <script src="@routes.Assets.versioned("lib/bootstrap/js/bootstrap.min.js")" crossorigin="anonymous"></script>
+@*    <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("lib/bootstrap/css/bootstrap.min.css")">*@
+@*    <script src="@routes.Assets.versioned("lib/bootstrap/js/bootstrap.min.js")" crossorigin="anonymous"></script>*@
     <div class="col-md-2" style="overflow:auto;max-height: 100vh;">
     @helper.form(action = action_form) {
 
@@ -27,52 +27,51 @@
     }
     </div>
     <div class="col-md-10">
-    <div class="row">
-        <div class="col-md-12">
-            <h1 class="font-bold">Offers</h1>
-            <hr>
+        <div class="row">
+            <div class="col-md-12">
+                <h1 class="font-bold">Offers</h1>
+                <hr>
+            </div>
         </div>
-    </div>
+        <div class="row">
+            <div class="col-md-12">
+            @if(offers != null){
+                <table class="table table-hover table-condensed" id="mytable">
+                    <thead>
+                        <tr>
+                            <th class="font-text">No.</th>
+                            <th class="font-text">Name</th>
+                            <th class="font-text">Travel agency name</th>
+                            <th class="font-text">Price/person</th>
+                            <th class="font-text">Duration</th>
+                            <th class="font-text">Stars</th>
+                            <th class="font-text">Review rate</th>
+                            <th class="font-text">Is AllIn</th>
+                            <th class="font-text">Link</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @for(offer <- searchedOffers){
 
-    <div class="row">
-        <div class="col-md-12">
-        @if(offers != null){
-            <table class="table table-hover table-condensed" id="mytable">
-                <thead>
-                    <tr>
-                        <th class="font-text">No.</th>
-                        <th class="font-text">Name</th>
-                        <th class="font-text">Travel agency name</th>
-                        <th class="font-text">Price/person</th>
-                        <th class="font-text">Duration</th>
-                        <th class="font-text">Stars</th>
-                        <th class="font-text">Review rate</th>
-                        <th class="font-text">Is AllIn</th>
-                        <th class="font-text">Link</th>
-                    </tr>
-                </thead>
-                <tbody>
-                @for(offer <- searchedOffers){
+                        <tr>
+                            <td class="font-text">@searchedOffers.indexOf(offer)</td>
+                            <td class="font-text">@offer.name</td>
+                            <td class="font-text">@offer.travelAgencyName</td>
+                            <td class="font-text">@offer.price</td>
+                            <td class="font-text">@offer.duration</td>
+                            <td class="font-text">@offer.hotelRate/5</td>
+                            <td class="font-text">@offer.reviewRate/6</td>
+                            <td class="font-text">@offer.isAllInclusive</td>
+                            <td class="font-text"><a href="@offer.link" target="_blank" >link</a></td>
+                        </tr>
 
-                    <tr>
-                        <td class="font-text">@searchedOffers.indexOf(offer)</td>
-                        <td class="font-text">@offer.name</td>
-                        <td class="font-text">@offer.travelAgencyName</td>
-                        <td class="font-text">@offer.price</td>
-                        <td class="font-text">@offer.duration</td>
-                        <td class="font-text">@offer.hotelRate/5</td>
-                        <td class="font-text">@offer.reviewRate/6</td>
-                        <td class="font-text">@offer.isAllInclusive</td>
-                        <td class="font-text"><a href="@offer.link" target="_blank" >link</a></td>
-                    </tr>
-
-                }
-                </tbody>
-            </table>
-        }else{
-            <h3>No data for this params.</h3>
-        }
+                    }
+                    </tbody>
+                </table>
+            }else{
+                <h3>No data for this params.</h3>
+            }
+            </div>
         </div>
-    </div>
     </div>
 }

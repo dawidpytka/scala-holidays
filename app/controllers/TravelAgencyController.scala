@@ -19,6 +19,7 @@ import scala.collection.mutable.ListBuffer
 
 @Singleton
 class TravelAgencyController @Inject()(val controllerComponents: ControllerComponents, service: TravelAgencyService) extends BaseController with I18nSupport{
+  private var countries = ListBuffer[String]()
   private var offers = ListBuffer[Offer]()
   val dateTimeLocal: Formatter[Date] = Formats.dateFormat("yyyy-MM-dd")
   private val searchForm = Form[SearchForm](
@@ -37,25 +38,22 @@ class TravelAgencyController @Inject()(val controllerComponents: ControllerCompo
 
   def getOffers: Action[AnyContent] = Action { implicit request =>
     offers = ListBuffer[Offer]()
-    //offers = service.getBestOffers(new DateTime().plusDays(60), new DateTime().plusDays(70), List("Czarnogóra", "Grecja"), 2)
-//    val bestOffers: Unit = service.getBestOffers(new DateTime().plusDays(60), new DateTime().plusDays(70), List("Czarnogóra", "Grecja"), 2)
-    Ok( views.html.offers(offers,searchForm, routes.TravelAgencyController.searchTrips,service.getAllCounties))
-
+    if(countries.isEmpty) countries = countries ++ service.getAllCounties
+    Ok( views.html.offers(offers,searchForm, routes.TravelAgencyController.searchTrips,countries))
   }
 
   def searchTrips: Action[AnyContent] = Action {
     implicit request =>
       searchForm.bindFromRequest.fold(
         formWithErrors => {
-          println("BUU")
           println(formWithErrors.errors.toString)
-          //offers = service.getBestOffers(new DateTime().plusDays(60), new DateTime().plusDays(70), List("Czarnogóra", "Grecja"), 2)
-          Ok( views.html.offers(offers,formWithErrors, routes.TravelAgencyController.searchTrips,service.getAllCounties ))
+          if(countries.isEmpty) countries = countries ++ service.getAllCounties
+          Ok( views.html.offers(offers,formWithErrors, routes.TravelAgencyController.searchTrips, countries ))
         },
         formCorrect => {
-          println("yupi")
           offers = service.getBestOffers(formCorrect.dateFrom, formCorrect.dateTo, List(formCorrect.Country), formCorrect.personsAmount, formCorrect.minDaysAmount, formCorrect.starsAmount, formCorrect.isLastMinute, formCorrect.isAllInclusive )
-          Ok( views.html.offers(offers, searchForm, routes.TravelAgencyController.searchTrips, service.getAllCounties))
+          if(countries.isEmpty) countries = countries ++ service.getAllCounties
+          Ok( views.html.offers(offers, searchForm, routes.TravelAgencyController.searchTrips, countries))
         }
 
       )
